@@ -23,14 +23,14 @@ public class Network {
     private static boolean running, shouldStop = false;
     public static boolean isOnline () { return running; }
 
-    public static void start () {
+    public static int connect () {
 
         X509Certificate certificate = PemLoader.loadX509Certificate("keys/server-cert.pem");
 
         if (certificate == null) {
 
             System.out.println("Failed to start! Server Certificate was not found!");
-            System.exit(-1);
+            return -1;
         }
 
         try {
@@ -53,23 +53,44 @@ public class Network {
             inStream = socket.getInputStream();
             outStream = socket.getOutputStream();
 
-            outStream.write(new byte[]{107,105,114,97}, 0, 4);
-
-            new Thread () {
-                public void run () { sendLoop(); }
-            }.start();
-            new Thread () {
-                public void run () { recvLoop(); }
-            }.start();
-
-            running = true; shouldStop = false;
+            return 0;
 
         } catch (Exception e) {
 
             e.printStackTrace();
-            System.exit(-1);
+            return -2;
         }
     }
+
+    public static void authenticate (
+        String username,
+        String passwordHash,
+        String realName,
+        String emailAddress
+    ) {
+        Authentication.register(
+            username, passwordHash, realName, emailAddress, outStream
+        );
+    }
+    public static void authenticate (String username, String passwordHash) {
+        Authentication.login(username, passwordHash, outStream);
+    }
+    public static void authenticate (String token) {
+        System.out.println("not implemented!");
+    }
+
+    public static void startIO () {
+
+        running = true; shouldStop = false;
+
+        new Thread () {
+            public void run () { sendLoop(); }
+        }.start();
+        new Thread () {
+            public void run () { recvLoop(); }
+        }.start();
+    }
+
     public static void stop () {
 
         try { socket.close(); } catch (Exception e) {}
