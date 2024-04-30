@@ -23,7 +23,7 @@ public class Network {
     private static boolean running, shouldStop = false;
     public static boolean isOnline () { return running; }
 
-    public static int connect () {
+    public static int connect (String address, int port) {
 
         X509Certificate certificate = PemLoader.loadX509Certificate("keys/server-cert.pem");
 
@@ -48,7 +48,7 @@ public class Network {
 
 
             SSLSocketFactory socketFactory = sslContext.getSocketFactory();
-            socket = (SSLSocket)socketFactory.createSocket("localhost", 8282);
+            socket = (SSLSocket)socketFactory.createSocket(address, port);
 
             inStream = socket.getInputStream();
             outStream = socket.getOutputStream();
