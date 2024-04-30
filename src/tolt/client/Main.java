@@ -2,11 +2,12 @@
 package tolt.client;
 
 import tolt.client.network.Network;
+import tolt.client.network.IOQueues;
+import tolt.client.service.util.BufferBuilder;
 
 public class Main {
 
     public static void main (String[] args) {
-
 
         try {
 
@@ -49,7 +50,23 @@ public class Main {
         // Network.authenticate("jonnyjon881", "FAKEHASH", "john the dripper", "john@smtp.john.com");
         // Network.authenticate("jonnyjon881", "FAKEHASH");
 
-        try { System.in.read(); } catch (Exception e) {}
+        try {
+
+            while (true) {
+
+                System.out.print("Enter a Message: ");
+                String message = System.console().readLine();
+
+                if (message.equals("exit")) break;
+
+                BufferBuilder builder = new BufferBuilder();
+                builder.append((short)69);
+                builder.append(message.getBytes("UTF8"));
+
+                IOQueues.Send.queue(builder.toArray());
+            }
+
+        } catch (Exception e) {}
 
         Network.stop();
     }
