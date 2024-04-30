@@ -17,6 +17,7 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.SSLSocket;
 
 import tolt.client.security.Loading.PemLoader;
+import tolt.client.network.module.Packet;
 
 public class Network {
 
@@ -102,19 +103,56 @@ public class Network {
     private static InputStream inStream;
     private static OutputStream outStream;
 
+    private static int idCache = -1, capacity;
+    private static byte[] sendCache;
+    private static final int packetChunkMax = 10;
     private static void sendLoop () {
 
         while (!shouldStop) try {
 
-            Thread.sleep(1000);
+            if (IOQueues.Send.count() == 0)
+                Thread.sleep(10);
 
-            ByteBuffer buffer = ByteBuffer.allocate(6);
-            buffer.putShort((short)1); //pid
-            buffer.putInt(0); //size
-            buffer.put(new byte[0]); //data
-            outStream.write(buffer.array(), 0, 6);
+            else {
 
-            System.out.println("pinged");
+                sendCache = IOQueues.Send.pop();
+                capacity = packetChunkMax;
+
+                    System.out.println("");
+                    System.out.println("In length: " + sendCache.length);
+                    System.out.println("Capacity: " + capacity);
+
+                if (capacity > sendCache.length) {
+
+                    outStream.write(sendCache, 0, sendCache.length);
+
+                        String c = ""; for (int x = 0; x < sendCache.length; ++x) c += sendCache[x] + ",";
+                        System.out.println(String.format("sent: [%sEOB]", c));
+
+                } else {
+
+                    if (sendCache.length % capacity != 0) {
+                        while (sendCache.length % capacity < 6 && capacity > 6)
+                            capacity--;
+
+
+                        System.out.println("Adjusted capacity: " + capacity);
+                    }
+
+                    int count = -java.lang.Math.floorDiv(-sendCache.length, capacity);
+                    for (int s = 0; s < count; ++s) {
+
+                        int size = java.lang.Math.min(capacity, sendCache.length - (s * capacity));
+                        byte[] section = new byte[size];
+                        System.arraycopy(sendCache, s * capacity, section, 0, size);
+
+                        outStream.write(section, 0, size);
+
+                            String c = ""; for (int x = 0; x < size; ++x) c += section[x] + ",";
+                            System.out.println(String.format("sent: [%sEOB]", c));
+                    }
+                }
+            }
 
         } catch (Exception e) {
 
@@ -167,8 +205,7 @@ public class Network {
                             );
                         ///////////////////////////// TEMP
 
-                        // Cache.IOQueues.Recv.queue(new Packet(
-                        //     id, packetId, new byte[0]));
+                        IOQueues.Recv.queue(new Packet(packetId, new byte[0]));
 
                         recvBuffer = ByteBuffer.allocate(2);
                         state = 0;
@@ -193,9 +230,7 @@ public class Network {
                         );
                     ///////////////////////////// TEMP
 
-                    //do something client related
-                    // Cache.IOQueues.Recv.queue(new Packet(
-                    //     id, packetId, recvBuffer.array()));
+                    IOQueues.Recv.queue(new Packet(packetId, new byte[0]));
 
                     recvBuffer = ByteBuffer.allocate(2);
                     state = 0;
